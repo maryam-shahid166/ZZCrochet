@@ -67,6 +67,15 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
 });
 
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error("SMTP VERIFY FAILED");
+    console.error(error);
+  } else {
+    console.log("SMTP SERVER IS READY");
+  }
+});
+
 function customerEmailHtml(order) {
   const colorChips = (order.paletteHex || '')
     .split(',').map(h => h.trim()).filter(Boolean)
