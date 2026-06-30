@@ -1298,7 +1298,7 @@ orderForm.addEventListener('submit', async e => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Something went wrong.');
 
-    formConfirm.textContent = `Order received — a confirmation email is on its way to ${document.getElementById('email').value} 🐾`;
+    formConfirm.textContent = `Order successfully booked! Sit tight and I will contact you shortly :) 🐾`;
     formConfirm.classList.add('show');
     formConfirm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     orderForm.reset();
