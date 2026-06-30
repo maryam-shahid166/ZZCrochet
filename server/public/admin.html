@@ -436,7 +436,9 @@ document.getElementById('filters').addEventListener('click', e => {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Z&amp;Z Crochet — Admin</title>
+<title>Z&amp;Z Crochet (Admin)</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="alternate icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,600&family=Quicksand:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -711,8 +713,8 @@ document.getElementById('filters').addEventListener('click', e => {
 
 <div id="loginScreen">
   <div class="login-box">
-    <div class="wordmark">Z<span class="amp">&amp;</span>Z<span class="wordmark-caption">Crochet Co.</span></div>
-    <p class="sub">Pull up a chair — sign in to see what's on the hook.</p>
+    <div class="wordmark">Z<span class="amp">&amp;</span>Z<span class="wordmark-caption"> Crochet</span></div>
+    <p class="sub">Check what's on the hook.</p>
     <div class="field">
       <label for="userInput">Username</label>
       <input type="text" id="userInput" placeholder="your username" autocomplete="username">
@@ -728,7 +730,7 @@ document.getElementById('filters').addEventListener('click', e => {
 
 <div id="dashboard" style="display:none;">
   <header>
-    <div class="wordmark">Z<span class="amp">&amp;</span>Z<span class="wordmark-caption">order desk</span></div>
+    <div class="wordmark">Z<span class="amp">&amp;</span>Z<span class="wordmark-caption"> Admin Dashboard</span></div>
     <div class="header-right">
       <span class="pill" id="orderCount">0 orders</span>
       <button class="logout-btn" onclick="logout()">Sign out</button>
@@ -796,7 +798,7 @@ function showDashboard(){
 function setGreeting(){
   const hour = new Date().getHours();
   const part = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
-  document.getElementById('greeting').textContent = `Hey ${ADMIN_NAME}, good ${part}`;
+  document.getElementById('greeting').textContent = `Hey ${ADMIN_NAME}, good ${part}`!;
   document.getElementById('dateLine').textContent = new Date().toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
 }
 
