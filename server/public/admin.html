@@ -1,198 +1,10 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Z&amp;Z Crochet — Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Quicksand:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --cream:#FDF6EE; --cream-deep:#F8ECDC; --rose:#F0B8C2; --terracotta:#E8967E;
-    --sage:#AFC9A8; --butter:#F6D87E; --charcoal:#4A3F3A; --charcoal-soft:#8a7d76;
-    --line:rgba(74,63,58,0.14);
-  }
-  *{box-sizing:border-box;}
-  body{margin:0;background:var(--cream);font-family:'Quicksand',sans-serif;color:var(--charcoal);}
-  header{padding:26px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:#fff;}
-  h1{font-family:'Fraunces',serif;font-size:22px;margin:0;}
-  .pill{font-family:'Space Mono',monospace;font-size:11px;background:var(--cream-deep);padding:6px 12px;border-radius:999px;}
-  main{padding:28px 32px;max-width:1100px;margin:0 auto;}
-  .login-box{max-width:380px;margin:90px auto;background:#fff;padding:32px;border-radius:20px;box-shadow:0 14px 30px rgba(74,63,58,0.12);text-align:center;}
-  .login-box input{width:100%;padding:11px 14px;margin-top:10px;border:2px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;}
-  .login-box button{margin-top:16px;width:100%;padding:12px;border:none;border-radius:999px;background:var(--terracotta);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
-  .filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
-  .filters button{
-    border:2px solid var(--line);background:#fff;padding:8px 16px;border-radius:999px;
-    font-weight:700;font-size:13px;cursor:pointer;color:var(--charcoal-soft);
-  }
-  .filters button.active{background:var(--charcoal);color:#fff;border-color:var(--charcoal);}
-  .order-card{
-    background:#fff;border-radius:18px;padding:20px 22px;margin-bottom:16px;
-    box-shadow:0 6px 18px rgba(74,63,58,0.08);
-    display:grid;grid-template-columns:1fr auto;gap:14px;
-  }
-  .order-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
-  .order-id{font-family:'Space Mono',monospace;font-size:12px;color:var(--charcoal-soft);}
-  .order-title{font-family:'Fraunces',serif;font-size:18px;margin:2px 0 6px;}
-  .meta-row{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--charcoal-soft);margin-bottom:10px;}
-  .meta-row span strong{color:var(--charcoal);}
-  .colors{display:flex;gap:6px;margin-bottom:10px;}
-  .chip{width:20px;height:20px;border-radius:6px;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,0.18);}
-  .notes{font-size:13px;background:var(--cream-deep);padding:10px 12px;border-radius:10px;color:var(--charcoal);}
-  .thumbs{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
-  .thumbs img{width:56px;height:56px;object-fit:cover;border-radius:10px;border:2px solid var(--line);}
-  .status-col{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
-  select.status{
-    font-family:'Space Mono',monospace;font-size:11.5px;text-transform:uppercase;
-    border:2px solid var(--line);border-radius:999px;padding:7px 12px;background:#fff;
-  }
-  .badge-new{color:#fff;background:var(--terracotta);}
-  .badge-in-progress{color:#fff;background:var(--butter);color:var(--charcoal);}
-  .badge-completed{color:#fff;background:var(--sage);}
-  .del-btn{font-size:12px;color:var(--charcoal-soft);background:none;border:none;cursor:pointer;text-decoration:underline;}
-  .empty{text-align:center;padding:60px 0;color:var(--charcoal-soft);}
-</style>
-</head>
-<body>
-
-<div id="loginScreen" class="login-box">
-  <h1>Z&amp;Z Admin</h1>
-  <p style="color:var(--charcoal-soft);font-size:13px;">Sign in with your admin credentials.</p>
-  <input type="text" id="userInput" placeholder="Username">
-  <input type="password" id="passInput" placeholder="Password">
-  <button onclick="login()">Sign in</button>
-  <p id="loginError" style="color:#c0392b;font-size:12.5px;margin-top:10px;"></p>
-</div>
-
-<div id="dashboard" style="display:none;">
-  <header>
-    <h1>🐾 Z&amp;Z Crochet — Orders</h1>
-    <span class="pill" id="orderCount">0 orders</span>
-  </header>
-  <main>
-    <div class="filters" id="filters">
-      <button data-filter="all" class="active">All</button>
-      <button data-filter="new">New</button>
-      <button data-filter="in-progress">In progress</button>
-      <button data-filter="completed">Completed</button>
-    </div>
-    <div id="ordersList"></div>
-  </main>
-</div>
-
-<script>
-// Set this to wherever your backend is deployed, e.g. "https://zz-crochet-api.onrender.com"
-const API_BASE = window.location.origin;
-
-let authHeader = sessionStorage.getItem('zzAdminAuth') || '';
-let allOrders = [];
-let activeFilter = 'all';
-
-if (authHeader) showDashboard();
-
-async function login(){
-  const user = document.getElementById('userInput').value;
-  const pass = document.getElementById('passInput').value;
-  authHeader = 'Basic ' + btoa(`${user}:${pass}`);
-  const res = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: authHeader } });
-  if(res.ok){
-    sessionStorage.setItem('zzAdminAuth', authHeader);
-    showDashboard();
-  } else {
-    document.getElementById('loginError').textContent = 'Invalid username or password.';
-  }
-}
-
-function showDashboard(){
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('dashboard').style.display = 'block';
-  loadOrders();
-}
-
-async function loadOrders(){
-  const res = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: authHeader } });
-  if(!res.ok){ sessionStorage.removeItem('zzAdminAuth'); location.reload(); return; }
-  allOrders = await res.json();
-  render();
-}
-
-function render(){
-  const list = document.getElementById('ordersList');
-  const filtered = activeFilter === 'all' ? allOrders : allOrders.filter(o => o.status === activeFilter);
-  document.getElementById('orderCount').textContent = `${allOrders.length} order${allOrders.length===1?'':'s'}`;
-
-  if(filtered.length === 0){
-    list.innerHTML = '<div class="empty">No orders here yet.</div>';
-    return;
-  }
-
-  list.innerHTML = filtered.map(o => `
-    <div class="order-card">
-      <div>
-        <div class="order-top">
-          <div>
-            <div class="order-id">${o.id} · ${new Date(o.createdAt).toLocaleString()}</div>
-            <div class="order-title">${o.itemType} — ${o.name}</div>
-          </div>
-        </div>
-        <div class="meta-row">
-          <span><strong>${o.size}</strong> size</span>
-          <span><strong>${o.yarnType}</strong></span>
-          <span>qty <strong>${o.qty}</strong></span>
-          <span>${o.email}</span>
-          ${o.deadline ? `<span>needed by <strong>${o.deadline}</strong></span>` : ''}
-        </div>
-        <div class="colors">
-          ${(o.paletteHex||'').split(',').filter(Boolean).map(h=>`<div class="chip" style="background:${h.trim()}"></div>`).join('')}
-        </div>
-        ${o.notes ? `<div class="notes">${o.notes}</div>` : ''}
-        ${o.images && o.images.length ? `<div class="thumbs">${o.images.map(src=>`<a href="${API_BASE}${src}" target="_blank"><img src="${API_BASE}${src}"></a>`).join('')}</div>` : ''}
-      </div>
-      <div class="status-col">
-        <select class="status badge-${o.status}" onchange="updateStatus('${o.id}', this.value)">
-          <option value="new" ${o.status==='new'?'selected':''}>New</option>
-          <option value="in-progress" ${o.status==='in-progress'?'selected':''}>In progress</option>
-          <option value="completed" ${o.status==='completed'?'selected':''}>Completed</option>
-        </select>
-        <button class="del-btn" onclick="deleteOrder('${o.id}')">Delete</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function updateStatus(id, status){
-  await fetch(`${API_BASE}/api/orders/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: authHeader },
-    body: JSON.stringify({ status })
-  });
-  loadOrders();
-}
-
-async function deleteOrder(id){
-  if(!confirm('Delete this order permanently?')) return;
-  await fetch(`${API_BASE}/api/orders/${id}`, { method: 'DELETE', headers: { Authorization: authHeader } });
-  loadOrders();
-}
-
-document.getElementById('filters').addEventListener('click', e => {
-  if(e.target.tagName !== 'BUTTON') return;
-  document.querySelectorAll('#filters button').forEach(b => b.classList.remove('active'));
-  e.target.classList.add('active');
-  activeFilter = e.target.dataset.filter;
-  render();
-});
-</script>
-</body>
-</html> -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Z&amp;Z Crochet — Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Quicksand:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,600&family=Quicksand:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --cream:#FDF6EE; --cream-deep:#F4E6D2; --rose:#F0B8C2; --terracotta:#E8967E;
@@ -203,52 +15,73 @@ document.getElementById('filters').addEventListener('click', e => {
   }
   *{box-sizing:border-box;}
   ::selection{background:var(--butter);color:var(--ink);}
+
+  /* ---------- animated glossy backdrop ---------- */
   body{
     margin:0;font-family:'Quicksand',sans-serif;color:var(--ink);
+    min-height:100vh; position:relative; overflow-x:hidden;
+    background:var(--cream);
+  }
+  body::before{
+    content:""; position:fixed; inset:-10%; z-index:0; pointer-events:none;
     background:
-      radial-gradient(circle at 8% 12%, rgba(240,184,194,0.18), transparent 40%),
-      radial-gradient(circle at 92% 85%, rgba(175,201,168,0.20), transparent 42%),
-      var(--cream);
-    min-height:100vh;
+      radial-gradient(circle at 12% 18%, rgba(240,184,194,0.30), transparent 38%),
+      radial-gradient(circle at 88% 14%, rgba(246,216,126,0.26), transparent 36%),
+      radial-gradient(circle at 78% 88%, rgba(175,201,168,0.30), transparent 40%),
+      radial-gradient(circle at 18% 84%, rgba(232,150,126,0.22), transparent 38%);
+    animation: driftBlobs 22s ease-in-out infinite alternate;
+    filter: blur(2px);
+  }
+  body::after{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.5;
+    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.55) 47%, rgba(255,255,255,0.0) 64%);
+    background-size:260% 260%;
+    animation: sheenSweep 9s linear infinite;
+  }
+  @keyframes driftBlobs{
+    0%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(-2%, 2%) scale(1.04); }
+    100%{ transform:translate(2%, -2%) scale(1.02); }
+  }
+  @keyframes sheenSweep{
+    0%{ background-position: 120% -20%; }
+    100%{ background-position: -40% 60%; }
+  }
+  #loginScreen, #dashboard{ position:relative; z-index:1; }
+
+  /* ---------- wordmark logo (text-only, used everywhere) ---------- */
+  .wordmark{ font-family:'Fraunces',serif; font-weight:700; line-height:1; display:inline-flex; align-items:baseline; gap:.05em; }
+  .wordmark .amp{ font-style:italic; font-weight:500; color:var(--terracotta); }
+  .wordmark-caption{
+    display:block; font-family:'Space Mono',monospace; font-size:9.5px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--charcoal-soft); margin-top:3px;
   }
 
-  /* ---------- shared bits ---------- */
   .eyebrow{
-    font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;
-    text-transform:uppercase;color:var(--charcoal-soft);
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--charcoal-soft);
   }
   .stitch-rule{
-    height:14px;width:100%;
+    height:14px; width:100%; position:relative; z-index:1;
     background-image: radial-gradient(circle at 7px 7px, transparent 5.5px, var(--cream-deep) 6px, var(--cream-deep) 7px, transparent 7.5px);
     background-size:14px 14px; background-repeat:repeat-x; background-position:bottom;
     opacity:.9;
   }
 
   /* ---------- login ---------- */
-  #loginScreen{
-    min-height:100vh; display:flex; align-items:center; justify-content:center;
-    padding:24px;
-  }
+  #loginScreen{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
   .login-box{
-    max-width:380px; width:100%; background:#fff; padding:38px 34px 30px;
-    border-radius:26px; box-shadow:var(--shadow-card);
+    max-width:380px; width:100%; background:rgba(255,255,255,0.88); backdrop-filter: blur(6px);
+    padding:40px 34px 30px; border-radius:26px; box-shadow:var(--shadow-card);
     text-align:center; position:relative; border:1px solid var(--line-soft);
   }
   .login-box::before{
-    content:""; position:absolute; left:0; right:0; top:0; height:8px;
-    border-radius:26px 26px 0 0;
+    content:""; position:absolute; left:0; right:0; top:0; height:8px; border-radius:26px 26px 0 0;
     background:repeating-linear-gradient(90deg, var(--rose) 0 10px, var(--terracotta) 10px 20px, var(--sage) 20px 30px, var(--butter) 30px 40px);
   }
-  .yarn-mark{
-    width:46px;height:46px;margin:6px auto 14px;border-radius:50%;
-    background:conic-gradient(from 0deg, var(--terracotta), var(--rose), var(--butter), var(--sage), var(--terracotta));
-    position:relative; box-shadow:0 6px 14px rgba(74,63,58,.18);
-  }
-  .yarn-mark::after{
-    content:""; position:absolute; inset:9px; background:#fff; border-radius:50%;
-  }
-  .login-box h1{font-family:'Fraunces',serif;font-size:25px;margin:0 0 4px;font-weight:600;}
-  .login-box .sub{color:var(--charcoal-soft);font-size:13.5px;margin:0 0 22px;}
+  .login-box .wordmark{ font-size:30px; }
+  .login-box .wordmark-caption{ text-align:center; }
+  .login-box .sub{ color:var(--charcoal-soft); font-size:13.5px; margin:16px 0 22px; }
   .field{ text-align:left; margin-top:14px; }
   .field label{
     display:block; font-family:'Space Mono',monospace; font-size:10.5px;
@@ -263,24 +96,18 @@ document.getElementById('filters').addEventListener('click', e => {
   .login-box button{
     margin-top:22px; width:100%; padding:13px; border:none; border-radius:999px;
     background:var(--ink); color:#fff; font-weight:700; font-size:14.5px;
-    cursor:pointer; font-family:'Quicksand',sans-serif; letter-spacing:.01em;
-    transition:transform .12s ease, background .15s ease;
+    cursor:pointer; font-family:'Quicksand',sans-serif; transition:transform .12s ease, background .15s ease;
   }
   .login-box button:hover{ background:var(--terracotta); transform:translateY(-1px); }
-  .login-box button:active{ transform:translateY(0); }
   #loginError{ color:#B5453A; font-size:12.5px; margin-top:12px; min-height:16px; font-weight:600; }
 
   /* ---------- dashboard shell ---------- */
   header{
-    padding:22px 36px; display:flex; align-items:center; justify-content:space-between;
-    background:#fff; border-bottom:1px solid var(--line);
-    position:sticky; top:0; z-index:5;
+    padding:20px 36px; display:flex; align-items:center; justify-content:space-between;
+    background:rgba(255,255,255,0.82); backdrop-filter: blur(6px);
+    border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5;
   }
-  .brand{ display:flex; align-items:center; gap:12px; }
-  .brand .yarn-mark{ width:34px; height:34px; margin:0; }
-  .brand .yarn-mark::after{ inset:7px; }
-  header h1{ font-family:'Fraunces',serif; font-size:19px; margin:0; font-weight:600; }
-  header h1 small{ display:block; font-family:'Space Mono',monospace; font-size:10.5px; color:var(--charcoal-soft); font-weight:400; letter-spacing:.06em; }
+  header .wordmark{ font-size:21px; }
   .pill{
     font-family:'Space Mono',monospace; font-size:11px; background:var(--cream-deep);
     padding:7px 14px; border-radius:999px; color:var(--charcoal); border:1px solid var(--line-soft);
@@ -292,16 +119,23 @@ document.getElementById('filters').addEventListener('click', e => {
   }
   .logout-btn:hover{ border-color:var(--terracotta); color:var(--terracotta); }
 
-  main{ padding:0 36px 60px; max-width:1100px; margin:0 auto; }
+  main{ padding:0 36px 60px; max-width:1100px; margin:0 auto; position:relative; z-index:1; }
 
-  .welcome{ padding:34px 2px 10px; }
-  .welcome .eyebrow{ margin-bottom:6px; }
-  .welcome h2{ font-family:'Fraunces',serif; font-size:30px; margin:0 0 6px; font-weight:600; }
+  .welcome{ padding:34px 2px 6px; }
+  .welcome h2{ font-family:'Fraunces',serif; font-size:30px; margin:6px 0 6px; font-weight:600; }
   .welcome p{ margin:0; color:var(--charcoal-soft); font-size:14.5px; max-width:520px; line-height:1.5; }
+
+  /* signature element: a hand-drawn running-stitch trail that draws itself once on load */
+  .stitch-trail{ width:220px; height:18px; margin-top:10px; }
+  .stitch-trail path{
+    fill:none; stroke:var(--terracotta); stroke-width:2; stroke-linecap:round;
+    stroke-dasharray:4 7; stroke-dashoffset:300; animation:stitchDraw 1.6s ease-out .2s forwards;
+  }
+  @keyframes stitchDraw{ to{ stroke-dashoffset:0; } }
 
   .stats-row{ display:flex; gap:14px; margin:22px 0 26px; flex-wrap:wrap; }
   .stat-card{
-    background:#fff; border:1px solid var(--line-soft); border-radius:18px; padding:16px 20px;
+    background:rgba(255,255,255,0.9); border:1px solid var(--line-soft); border-radius:18px; padding:16px 20px;
     min-width:128px; box-shadow:var(--shadow-card);
   }
   .stat-card .num{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; }
@@ -319,39 +153,67 @@ document.getElementById('filters').addEventListener('click', e => {
   .filters button:hover{ border-color:var(--terracotta); color:var(--terracotta); }
   .filters button.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
 
-  /* ---------- order cards ---------- */
+  /* ---------- order ticket cards (signature element) ---------- */
   .order-card{
-    background:#fff; border-radius:20px; padding:22px 24px; margin-bottom:16px;
+    background:#fff; border-radius:18px; margin-bottom:22px;
     box-shadow:var(--shadow-card); border:1px solid var(--line-soft);
-    display:grid; grid-template-columns:1fr auto; gap:16px;
-    position:relative; overflow:hidden;
+    display:grid; grid-template-columns:64px 1fr auto; position:relative;
     animation:rise .35s ease both;
   }
   @keyframes rise{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:translateY(0);} }
-  .order-card::before{
-    content:""; position:absolute; left:0; top:0; bottom:0; width:5px;
-  }
-  .order-card[data-status="new"]::before{ background:var(--terracotta); }
-  .order-card[data-status="in-progress"]::before{ background:var(--butter-deep); }
-  .order-card[data-status="completed"]::before{ background:var(--sage-deep); }
 
-  .order-id{ font-family:'Space Mono',monospace; font-size:11.5px; color:var(--charcoal-soft); }
-  .order-title{ font-family:'Fraunces',serif; font-size:19px; margin:3px 0 8px; font-weight:600; }
-  .meta-row{ display:flex; flex-wrap:wrap; gap:8px 10px; font-size:13px; color:var(--charcoal-soft); margin-bottom:12px; }
-  .meta-row span{ background:var(--cream); padding:4px 10px; border-radius:8px; }
-  .meta-row span strong{ color:var(--ink); }
+  /* fabric-swatch strip across the very top */
+  .order-card .swatch-strip{
+    grid-column:1 / -1; height:6px; border-radius:18px 18px 0 0;
+  }
+  .order-card[data-status="new"] .swatch-strip{ background:linear-gradient(90deg,var(--terracotta),var(--rose)); }
+  .order-card[data-status="in-progress"] .swatch-strip{ background:linear-gradient(90deg,var(--butter-deep),var(--butter)); }
+  .order-card[data-status="completed"] .swatch-strip{ background:linear-gradient(90deg,var(--sage-deep),var(--sage)); }
+
+  /* ticket stub on the left, with punched holes + perforation */
+  .ticket-stub{
+    border-right:2px dashed var(--line); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px; padding:18px 6px;
+    position:relative;
+  }
+  .ticket-stub::before, .ticket-stub::after{
+    content:""; position:absolute; left:-9px; width:16px; height:16px; border-radius:50%;
+    background:var(--cream); border:1px solid var(--line-soft);
+  }
+  .ticket-stub::before{ top:-9px; }
+  .ticket-stub::after{ bottom:-9px; }
+  .ticket-num{
+    writing-mode:vertical-rl; transform:rotate(180deg);
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.08em; color:var(--charcoal-soft);
+  }
+  .ticket-dot{ width:11px; height:11px; border-radius:50%; }
+  .order-card[data-status="new"] .ticket-dot{ background:var(--terracotta); }
+  .order-card[data-status="in-progress"] .ticket-dot{ background:var(--butter-deep); }
+  .order-card[data-status="completed"] .ticket-dot{ background:var(--sage-deep); }
+
+  .order-body{ padding:20px 22px; }
+  .order-title{ font-family:'Fraunces',serif; font-size:20px; margin:0 0 3px; font-weight:600; }
+  .order-sub{ font-family:'Space Mono',monospace; font-size:11px; color:var(--charcoal-soft); margin-bottom:14px; }
+
+  .detail-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); gap:10px 14px;
+    margin-bottom:14px; padding:14px; background:var(--cream); border-radius:12px;
+  }
+  .detail-grid .d-item .d-lbl{ font-family:'Space Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--charcoal-soft); }
+  .detail-grid .d-item .d-val{ font-size:14px; font-weight:700; color:var(--ink); margin-top:2px; }
+
   .colors{ display:flex; gap:6px; margin-bottom:12px; align-items:center; }
   .colors .lbl{ font-family:'Space Mono',monospace; font-size:10px; color:var(--charcoal-soft); margin-right:4px; }
   .chip{ width:20px; height:20px; border-radius:7px; border:2px solid #fff; box-shadow:0 2px 5px rgba(0,0,0,0.18); }
-  .notes{ font-size:13.5px; background:var(--cream-deep); padding:11px 14px; border-radius:12px; color:var(--ink); line-height:1.45; }
+  .notes{ font-size:13.5px; background:var(--cream-deep); padding:12px 14px; border-radius:12px; color:var(--ink); line-height:1.5; }
+  .notes .d-lbl{ font-family:'Space Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--charcoal-soft); display:block; margin-bottom:4px; }
 
-  .status-col{ display:flex; flex-direction:column; gap:10px; align-items:flex-end; justify-content:space-between; }
+  .status-col{ display:flex; flex-direction:column; gap:10px; align-items:flex-end; justify-content:space-between; padding:20px 22px 20px 6px; }
   select.status{
     font-family:'Space Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
     border:2px solid transparent; border-radius:999px; padding:8px 30px 8px 14px; cursor:pointer;
     appearance:none; -webkit-appearance:none;
-    background-repeat:no-repeat; background-position:right 12px center; background-size:9px;
-    font-weight:700;
+    background-repeat:no-repeat; background-position:right 12px center; background-size:9px; font-weight:700;
   }
   select.status.badge-new{ background-color:#FCE3DA; color:#9A4B34; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0L5 6L10 0' fill='none' stroke='%239A4B34' stroke-width='1.5'/></svg>"); }
   select.status.badge-in-progress{ background-color:#FBEEC3; color:#8A6A14; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0L5 6L10 0' fill='none' stroke='%238A6A14' stroke-width='1.5'/></svg>"); }
@@ -366,16 +228,18 @@ document.getElementById('filters').addEventListener('click', e => {
 
   .empty{
     text-align:center; padding:70px 20px; color:var(--charcoal-soft);
-    background:#fff; border-radius:20px; border:2px dashed var(--line); margin-top:6px;
+    background:rgba(255,255,255,0.85); border-radius:20px; border:2px dashed var(--line); margin-top:6px;
   }
-  .empty .yarn-mark{ margin:0 auto 16px; opacity:.7; }
   .empty h3{ font-family:'Fraunces',serif; color:var(--ink); margin:0 0 6px; font-weight:600; font-size:18px; }
   .empty p{ margin:0; font-size:13.5px; }
 
   @media (max-width:640px){
     header, main{ padding-left:18px; padding-right:18px; }
     .order-card{ grid-template-columns:1fr; }
-    .status-col{ flex-direction:row; align-items:center; justify-content:space-between; }
+    .ticket-stub{ flex-direction:row; border-right:none; border-bottom:2px dashed var(--line); padding:10px; }
+    .ticket-stub::before, .ticket-stub::after{ display:none; }
+    .ticket-num{ writing-mode:horizontal-tb; transform:none; }
+    .status-col{ flex-direction:row; align-items:center; justify-content:space-between; padding:16px 22px; }
   }
 </style>
 </head>
@@ -383,8 +247,7 @@ document.getElementById('filters').addEventListener('click', e => {
 
 <div id="loginScreen">
   <div class="login-box">
-    <div class="yarn-mark"></div>
-    <h1>Z&amp;Z Admin</h1>
+    <div class="wordmark">Z<span class="amp">&amp;</span>Z<span class="wordmark-caption">Crochet Co.</span></div>
     <p class="sub">Pull up a chair — sign in to see what's on the hook.</p>
     <div class="field">
       <label for="userInput">Username</label>
@@ -401,10 +264,7 @@ document.getElementById('filters').addEventListener('click', e => {
 
 <div id="dashboard" style="display:none;">
   <header>
-    <div class="brand">
-      <div class="yarn-mark"></div>
-      <h1>Z&amp;Z Crochet<small>order desk</small></h1>
-    </div>
+    <div class="wordmark">Z<span class="amp">&amp;</span>Z<span class="wordmark-caption">order desk</span></div>
     <div class="header-right">
       <span class="pill" id="orderCount">0 orders</span>
       <button class="logout-btn" onclick="logout()">Sign out</button>
@@ -416,6 +276,7 @@ document.getElementById('filters').addEventListener('click', e => {
       <div class="eyebrow" id="dateLine">Today</div>
       <h2 id="greeting">Hey Simrah</h2>
       <p id="welcomeSub">Here's everything waiting on the hook right now.</p>
+      <svg class="stitch-trail" viewBox="0 0 220 18"><path d="M2 14 Q 30 2, 58 14 T 114 14 T 170 14 T 218 14"/></svg>
     </div>
 
     <div class="stats-row" id="statsRow"></div>
@@ -505,7 +366,6 @@ function render(){
   if(filtered.length === 0){
     list.innerHTML = `
       <div class="empty">
-        <div class="yarn-mark"></div>
         <h3>Nothing here yet</h3>
         <p>${activeFilter === 'all' ? "Orders will show up here as they come in." : `No orders are currently ${activeFilter.replace('-', ' ')}.`}</p>
       </div>`;
@@ -514,18 +374,25 @@ function render(){
 
   list.innerHTML = filtered.map(o => `
     <div class="order-card" data-status="${o.status}">
-      <div>
-        <div class="order-id">${o.id} · ${new Date(o.createdAt).toLocaleString()}</div>
+      <div class="swatch-strip"></div>
+      <div class="ticket-stub">
+        <div class="ticket-dot"></div>
+        <span class="ticket-num">${o.id}</span>
+      </div>
+      <div class="order-body">
         <div class="order-title">${o.itemType} — ${o.name}</div>
-        <div class="meta-row">
-          <span><strong>${o.size}</strong> size</span>
-          <span><strong>${o.yarnType}</strong></span>
-          <span>qty <strong>${o.qty}</strong></span>
-          <span>${o.email}</span>
-          ${o.deadline ? `<span>needed by <strong>${o.deadline}</strong></span>` : ''}
+        <div class="order-sub">placed ${new Date(o.createdAt).toLocaleString()}</div>
+
+        <div class="detail-grid">
+          <div class="d-item"><div class="d-lbl">Size</div><div class="d-val">${o.size}</div></div>
+          <div class="d-item"><div class="d-lbl">Yarn</div><div class="d-val">${o.yarnType}</div></div>
+          <div class="d-item"><div class="d-lbl">Quantity</div><div class="d-val">${o.qty}</div></div>
+          <div class="d-item"><div class="d-lbl">Contact</div><div class="d-val">${o.email}</div></div>
+          ${o.deadline ? `<div class="d-item"><div class="d-lbl">Needed by</div><div class="d-val">${o.deadline}</div></div>` : ''}
         </div>
+
         ${o.paletteHex ? `<div class="colors"><span class="lbl">palette</span>${o.paletteHex.split(',').filter(Boolean).map(h=>`<div class="chip" style="background:${h.trim()}"></div>`).join('')}</div>` : ''}
-        ${o.notes ? `<div class="notes">${o.notes}</div>` : ''}
+        ${o.notes ? `<div class="notes"><span class="d-lbl">Notes</span>${o.notes}</div>` : ''}
       </div>
       <div class="status-col">
         <select class="status badge-${o.status}" onchange="updateStatus('${o.id}', this.value)">
