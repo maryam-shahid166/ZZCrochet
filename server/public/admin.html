@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -392,6 +392,471 @@ function render(){
         </div>
 
         ${o.paletteHex ? `<div class="colors"><span class="lbl">palette</span>${o.paletteHex.split(',').filter(Boolean).map(h=>`<div class="chip" style="background:${h.trim()}"></div>`).join('')}</div>` : ''}
+        ${o.notes ? `<div class="notes"><span class="d-lbl">Notes</span>${o.notes}</div>` : ''}
+      </div>
+      <div class="status-col">
+        <select class="status badge-${o.status}" onchange="updateStatus('${o.id}', this.value)">
+          <option value="new" ${o.status==='new'?'selected':''}>New</option>
+          <option value="in-progress" ${o.status==='in-progress'?'selected':''}>In progress</option>
+          <option value="completed" ${o.status==='completed'?'selected':''}>Completed</option>
+        </select>
+        <button class="del-btn" onclick="deleteOrder('${o.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function updateStatus(id, status){
+  await fetch(`${API_BASE}/api/orders/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: authHeader },
+    body: JSON.stringify({ status })
+  });
+  loadOrders();
+}
+
+async function deleteOrder(id){
+  if(!confirm('Delete this order permanently?')) return;
+  await fetch(`${API_BASE}/api/orders/${id}`, { method: 'DELETE', headers: { Authorization: authHeader } });
+  loadOrders();
+}
+
+document.getElementById('filters').addEventListener('click', e => {
+  if(e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('#filters button').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  activeFilter = e.target.dataset.filter;
+  render();
+});
+</script>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Z&amp;Z Crochet — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,600&family=Quicksand:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FDF6EE; --cream-deep:#F4E6D2; --rose:#F0B8C2; --terracotta:#E8967E;
+    --sage:#AFC9A8; --sage-deep:#7FA177; --butter:#F6D87E; --butter-deep:#D9A93C;
+    --ink:#3A2F2A; --charcoal:#4A3F3A; --charcoal-soft:#8a7d76;
+    --line:rgba(74,63,58,0.16); --line-soft:rgba(74,63,58,0.09);
+    --shadow-card: 0 10px 26px rgba(74,63,58,0.10), 0 1px 2px rgba(74,63,58,0.06);
+  }
+  *{box-sizing:border-box; min-width:0;}
+  html{ overflow-x:hidden; width:100%; }
+  ::selection{background:var(--butter);color:var(--ink);}
+
+  /* ---------- animated glossy backdrop ---------- */
+  body{
+    margin:0;font-family:'Quicksand',sans-serif;color:var(--ink);
+    min-height:100vh; position:relative; overflow-x:hidden; width:100%;
+    background:var(--cream);
+  }
+  img{ max-width:100%; display:block; }
+  body::before{
+    content:""; position:fixed; inset:-10%; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(circle at 12% 18%, rgba(240,184,194,0.30), transparent 38%),
+      radial-gradient(circle at 88% 14%, rgba(246,216,126,0.26), transparent 36%),
+      radial-gradient(circle at 78% 88%, rgba(175,201,168,0.30), transparent 40%),
+      radial-gradient(circle at 18% 84%, rgba(232,150,126,0.22), transparent 38%);
+    animation: driftBlobs 22s ease-in-out infinite alternate;
+    filter: blur(2px);
+  }
+  body::after{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.5;
+    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.55) 47%, rgba(255,255,255,0.0) 64%);
+    background-size:260% 260%;
+    animation: sheenSweep 9s linear infinite;
+  }
+  @keyframes driftBlobs{
+    0%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(-2%, 2%) scale(1.04); }
+    100%{ transform:translate(2%, -2%) scale(1.02); }
+  }
+  @keyframes sheenSweep{
+    0%{ background-position: 120% -20%; }
+    100%{ background-position: -40% 60%; }
+  }
+  #loginScreen, #dashboard{ position:relative; z-index:1; }
+
+  /* ---------- wordmark logo (text-only, used everywhere) ---------- */
+  .wordmark{ font-family:'Fraunces',serif; font-weight:700; line-height:1; display:inline-flex; align-items:baseline; gap:.05em; }
+  .wordmark .amp{ font-style:italic; font-weight:500; color:var(--terracotta); }
+  .wordmark-caption{
+    display:block; font-family:'Space Mono',monospace; font-size:9.5px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--charcoal-soft); margin-top:3px;
+  }
+
+  .eyebrow{
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--charcoal-soft);
+  }
+  .stitch-rule{
+    height:14px; width:100%; position:relative; z-index:1;
+    background-image: radial-gradient(circle at 7px 7px, transparent 5.5px, var(--cream-deep) 6px, var(--cream-deep) 7px, transparent 7.5px);
+    background-size:14px 14px; background-repeat:repeat-x; background-position:bottom;
+    opacity:.9;
+  }
+
+  /* ---------- login ---------- */
+  #loginScreen{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .login-box{
+    max-width:380px; width:100%; background:rgba(255,255,255,0.88); backdrop-filter: blur(6px);
+    padding:40px 34px 30px; border-radius:26px; box-shadow:var(--shadow-card);
+    text-align:center; position:relative; border:1px solid var(--line-soft);
+  }
+  .login-box::before{
+    content:""; position:absolute; left:0; right:0; top:0; height:8px; border-radius:26px 26px 0 0;
+    background:repeating-linear-gradient(90deg, var(--rose) 0 10px, var(--terracotta) 10px 20px, var(--sage) 20px 30px, var(--butter) 30px 40px);
+  }
+  .login-box .wordmark{ font-size:30px; }
+  .login-box .wordmark-caption{ text-align:center; }
+  .login-box .sub{ color:var(--charcoal-soft); font-size:13.5px; margin:16px 0 22px; }
+  .field{ text-align:left; margin-top:14px; }
+  .field label{
+    display:block; font-family:'Space Mono',monospace; font-size:10.5px;
+    text-transform:uppercase; letter-spacing:.08em; color:var(--charcoal-soft); margin-bottom:6px;
+  }
+  .login-box input{
+    width:100%; padding:12px 14px; border:2px solid var(--line); border-radius:12px;
+    font-family:inherit; font-size:14.5px; color:var(--ink); background:var(--cream);
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .login-box input:focus{ outline:none; border-color:var(--terracotta); background:#fff; }
+  .login-box button{
+    margin-top:22px; width:100%; padding:13px; border:none; border-radius:999px;
+    background:var(--ink); color:#fff; font-weight:700; font-size:14.5px;
+    cursor:pointer; font-family:'Quicksand',sans-serif; transition:transform .12s ease, background .15s ease;
+  }
+  .login-box button:hover{ background:var(--terracotta); transform:translateY(-1px); }
+  #loginError{ color:#B5453A; font-size:12.5px; margin-top:12px; min-height:16px; font-weight:600; }
+
+  /* ---------- dashboard shell ---------- */
+  header{
+    padding:18px 36px; display:flex; align-items:center; justify-content:space-between;
+    background:rgba(255,255,255,0.82); backdrop-filter: blur(6px);
+    border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5;
+    flex-wrap:wrap; gap:10px;
+  }
+  header .wordmark{ font-size:21px; flex-shrink:0; }
+  .pill{
+    font-family:'Space Mono',monospace; font-size:11px; background:var(--cream-deep);
+    padding:7px 14px; border-radius:999px; color:var(--charcoal); border:1px solid var(--line-soft);
+    white-space:nowrap;
+  }
+  .header-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .logout-btn{
+    font-family:'Space Mono',monospace; font-size:11px; background:none; border:1px solid var(--line);
+    padding:7px 13px; border-radius:999px; cursor:pointer; color:var(--charcoal-soft);
+  }
+  .logout-btn:hover{ border-color:var(--terracotta); color:var(--terracotta); }
+
+  main{ padding:0 36px 60px; max-width:1100px; margin:0 auto; position:relative; z-index:1; width:100%; }
+
+  .welcome{ padding:34px 2px 6px; }
+  .welcome h2{ font-family:'Fraunces',serif; font-size:30px; margin:6px 0 6px; font-weight:600; }
+  .welcome p{ margin:0; color:var(--charcoal-soft); font-size:14.5px; max-width:520px; line-height:1.5; }
+
+  /* signature element: a hand-drawn running-stitch trail that draws itself once on load */
+  .stitch-trail{ width:220px; height:18px; margin-top:10px; }
+  .stitch-trail path{
+    fill:none; stroke:var(--terracotta); stroke-width:2; stroke-linecap:round;
+    stroke-dasharray:4 7; stroke-dashoffset:300; animation:stitchDraw 1.6s ease-out .2s forwards;
+  }
+  @keyframes stitchDraw{ to{ stroke-dashoffset:0; } }
+
+  .stats-row{ display:flex; gap:14px; margin:22px 0 26px; flex-wrap:wrap; }
+  .stat-card{
+    background:rgba(255,255,255,0.9); border:1px solid var(--line-soft); border-radius:18px; padding:16px 20px;
+    min-width:128px; box-shadow:var(--shadow-card);
+  }
+  .stat-card .num{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; }
+  .stat-card .lbl{ font-family:'Space Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--charcoal-soft); margin-top:2px; }
+  .stat-card.new .num{ color:var(--terracotta); }
+  .stat-card.progress .num{ color:var(--butter-deep); }
+  .stat-card.done .num{ color:var(--sage-deep); }
+
+  .filters{ display:flex; gap:8px; margin-bottom:22px; flex-wrap:wrap; }
+  .filters button{
+    border:2px solid var(--line); background:#fff; padding:9px 18px; border-radius:999px;
+    font-weight:700; font-size:13px; cursor:pointer; color:var(--charcoal-soft);
+    font-family:'Quicksand',sans-serif; transition:all .15s ease;
+  }
+  .filters button:hover{ border-color:var(--terracotta); color:var(--terracotta); }
+  .filters button.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  /* ---------- order ticket cards (signature element) ---------- */
+  .order-card{
+    background:#fff; border-radius:18px; margin-bottom:22px;
+    box-shadow:var(--shadow-card); border:1px solid var(--line-soft);
+    display:grid; grid-template-columns:64px 1fr auto; position:relative;
+    animation:rise .35s ease both;
+  }
+  @keyframes rise{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:translateY(0);} }
+
+  /* fabric-swatch strip across the very top */
+  .order-card .swatch-strip{
+    grid-column:1 / -1; height:6px; border-radius:18px 18px 0 0;
+  }
+  .order-card[data-status="new"] .swatch-strip{ background:linear-gradient(90deg,var(--terracotta),var(--rose)); }
+  .order-card[data-status="in-progress"] .swatch-strip{ background:linear-gradient(90deg,var(--butter-deep),var(--butter)); }
+  .order-card[data-status="completed"] .swatch-strip{ background:linear-gradient(90deg,var(--sage-deep),var(--sage)); }
+
+  /* ticket stub on the left, with punched holes + perforation */
+  .ticket-stub{
+    border-right:2px dashed var(--line); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px; padding:18px 6px;
+    position:relative; overflow:hidden;
+  }
+  .ticket-stub::before, .ticket-stub::after{
+    content:""; position:absolute; left:-9px; width:16px; height:16px; border-radius:50%;
+    background:var(--cream); border:1px solid var(--line-soft);
+  }
+  .ticket-stub::before{ top:-9px; }
+  .ticket-stub::after{ bottom:-9px; }
+  .ticket-num{
+    writing-mode:vertical-rl; transform:rotate(180deg);
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.08em; color:var(--charcoal-soft);
+  }
+  .ticket-dot{ width:11px; height:11px; border-radius:50%; }
+  .order-card[data-status="new"] .ticket-dot{ background:var(--terracotta); }
+  .order-card[data-status="in-progress"] .ticket-dot{ background:var(--butter-deep); }
+  .order-card[data-status="completed"] .ticket-dot{ background:var(--sage-deep); }
+
+  .order-body{ padding:20px 22px; }
+  .order-title{ font-family:'Fraunces',serif; font-size:20px; margin:0 0 3px; font-weight:600; }
+  .order-sub{ font-family:'Space Mono',monospace; font-size:11px; color:var(--charcoal-soft); margin-bottom:14px; }
+
+  .detail-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(110px,1fr)); gap:10px 14px;
+    margin-bottom:14px; padding:14px; background:var(--cream); border-radius:12px;
+  }
+  .detail-grid .d-item{ min-width:0; }
+  .detail-grid .d-item .d-lbl{ font-family:'Space Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--charcoal-soft); }
+  .detail-grid .d-item .d-val{ font-size:14px; font-weight:700; color:var(--ink); margin-top:2px; overflow-wrap:anywhere; word-break:break-word; line-height:1.3; }
+
+  .colors{ display:flex; gap:6px; margin-bottom:12px; align-items:center; flex-wrap:wrap; }
+  .colors .lbl{ font-family:'Space Mono',monospace; font-size:10px; color:var(--charcoal-soft); margin-right:4px; }
+  .chip{ width:20px; height:20px; border-radius:7px; border:2px solid #fff; box-shadow:0 2px 5px rgba(0,0,0,0.18); flex-shrink:0; }
+  .notes{ font-size:13.5px; background:var(--cream-deep); padding:12px 14px; border-radius:12px; color:var(--ink); line-height:1.5; overflow-wrap:anywhere; word-break:break-word; margin-bottom:12px; }
+  .notes .d-lbl{ font-family:'Space Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--charcoal-soft); display:block; margin-bottom:4px; }
+
+  .thumbs{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+  .thumbs a{ display:block; line-height:0; }
+  .thumbs img{
+    width:58px; height:58px; object-fit:cover; border-radius:10px; border:2px solid var(--line-soft);
+    transition:transform .15s ease;
+  }
+  .thumbs img:hover{ transform:scale(1.06); border-color:var(--terracotta); }
+  .thumbs .d-lbl{ width:100%; font-family:'Space Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--charcoal-soft); margin-bottom:6px; }
+
+  .status-col{ display:flex; flex-direction:column; gap:10px; align-items:flex-end; justify-content:space-between; padding:20px 22px 20px 6px; }
+  select.status{
+    font-family:'Space Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    border:2px solid transparent; border-radius:999px; padding:8px 30px 8px 14px; cursor:pointer;
+    appearance:none; -webkit-appearance:none;
+    background-repeat:no-repeat; background-position:right 12px center; background-size:9px; font-weight:700;
+  }
+  select.status.badge-new{ background-color:#FCE3DA; color:#9A4B34; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0L5 6L10 0' fill='none' stroke='%239A4B34' stroke-width='1.5'/></svg>"); }
+  select.status.badge-in-progress{ background-color:#FBEEC3; color:#8A6A14; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0L5 6L10 0' fill='none' stroke='%238A6A14' stroke-width='1.5'/></svg>"); }
+  select.status.badge-completed{ background-color:#DCEAD8; color:#3F6B38; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0L5 6L10 0' fill='none' stroke='%233F6B38' stroke-width='1.5'/></svg>"); }
+  select.status option{ background:#fff; color:var(--ink); }
+
+  .del-btn{
+    font-size:12px; color:var(--charcoal-soft); background:none; border:none; cursor:pointer;
+    font-family:'Quicksand',sans-serif; font-weight:600; text-decoration:underline; text-underline-offset:2px;
+  }
+  .del-btn:hover{ color:#B5453A; }
+
+  .empty{
+    text-align:center; padding:70px 20px; color:var(--charcoal-soft);
+    background:rgba(255,255,255,0.85); border-radius:20px; border:2px dashed var(--line); margin-top:6px;
+  }
+  .empty h3{ font-family:'Fraunces',serif; color:var(--ink); margin:0 0 6px; font-weight:600; font-size:18px; }
+  .empty p{ margin:0; font-size:13.5px; }
+
+  @media (max-width:640px){
+    header{ padding:14px 18px; }
+    main{ padding-left:18px; padding-right:18px; }
+    .welcome{ padding-top:24px; }
+    .welcome h2{ font-size:24px; }
+    .stitch-trail{ width:170px; }
+    .stats-row{ gap:10px; }
+    .stat-card{ flex:1 1 calc(33.333% - 10px); min-width:0; padding:12px 14px; }
+    .stat-card .num{ font-size:21px; }
+    .order-card{ grid-template-columns:1fr; }
+    .ticket-stub{ flex-direction:row; border-right:none; border-bottom:2px dashed var(--line); padding:10px 16px; justify-content:flex-start; }
+    .ticket-stub::before, .ticket-stub::after{ display:none; }
+    .ticket-num{ writing-mode:horizontal-tb; transform:none; }
+    .order-body{ padding:16px 18px; }
+    .order-title{ font-size:18px; }
+    .status-col{ flex-direction:row; align-items:center; justify-content:space-between; padding:14px 18px; }
+    .detail-grid{ grid-template-columns:repeat(auto-fit, minmax(95px,1fr)); padding:12px; }
+    .login-box{ padding:30px 22px 24px; }
+  }
+
+  @media (max-width:380px){
+    .stat-card{ flex:1 1 100%; }
+    .filters{ gap:6px; }
+    .filters button{ padding:8px 13px; font-size:12px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="wordmark">Z<span class="amp">&amp;</span>Z<span class="wordmark-caption">Crochet Co.</span></div>
+    <p class="sub">Pull up a chair — sign in to see what's on the hook.</p>
+    <div class="field">
+      <label for="userInput">Username</label>
+      <input type="text" id="userInput" placeholder="your username" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="passInput">Password</label>
+      <input type="password" id="passInput" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button onclick="login()">Sign in</button>
+    <p id="loginError"></p>
+  </div>
+</div>
+
+<div id="dashboard" style="display:none;">
+  <header>
+    <div class="wordmark">Z<span class="amp">&amp;</span>Z<span class="wordmark-caption">order desk</span></div>
+    <div class="header-right">
+      <span class="pill" id="orderCount">0 orders</span>
+      <button class="logout-btn" onclick="logout()">Sign out</button>
+    </div>
+  </header>
+  <div class="stitch-rule"></div>
+  <main>
+    <div class="welcome">
+      <div class="eyebrow" id="dateLine">Today</div>
+      <h2 id="greeting">Hey Simrah</h2>
+      <p id="welcomeSub">Here's everything waiting on the hook right now.</p>
+      <svg class="stitch-trail" viewBox="0 0 220 18"><path d="M2 14 Q 30 2, 58 14 T 114 14 T 170 14 T 218 14"/></svg>
+    </div>
+
+    <div class="stats-row" id="statsRow"></div>
+
+    <div class="filters" id="filters">
+      <button data-filter="all" class="active">All</button>
+      <button data-filter="new">New</button>
+      <button data-filter="in-progress">In progress</button>
+      <button data-filter="completed">Completed</button>
+    </div>
+    <div id="ordersList"></div>
+  </main>
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+const ADMIN_NAME = "Simrah";
+
+let authHeader = sessionStorage.getItem('zzAdminAuth') || '';
+let allOrders = [];
+let activeFilter = 'all';
+
+if (authHeader) showDashboard();
+
+document.getElementById('passInput').addEventListener('keydown', e => { if(e.key === 'Enter') login(); });
+document.getElementById('userInput').addEventListener('keydown', e => { if(e.key === 'Enter') login(); });
+
+async function login(){
+  const user = document.getElementById('userInput').value;
+  const pass = document.getElementById('passInput').value;
+  authHeader = 'Basic ' + btoa(`${user}:${pass}`);
+  const res = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: authHeader } });
+  if(res.ok){
+    sessionStorage.setItem('zzAdminAuth', authHeader);
+    showDashboard();
+  } else {
+    document.getElementById('loginError').textContent = "That username or password doesn't match.";
+  }
+}
+
+function logout(){
+  sessionStorage.removeItem('zzAdminAuth');
+  location.reload();
+}
+
+function showDashboard(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  setGreeting();
+  loadOrders();
+}
+
+function setGreeting(){
+  const hour = new Date().getHours();
+  const part = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+  document.getElementById('greeting').textContent = `Hey ${ADMIN_NAME}, good ${part}`;
+  document.getElementById('dateLine').textContent = new Date().toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+}
+
+async function loadOrders(){
+  const res = await fetch(`${API_BASE}/api/orders`, { headers: { Authorization: authHeader } });
+  if(!res.ok){ sessionStorage.removeItem('zzAdminAuth'); location.reload(); return; }
+  allOrders = await res.json();
+  renderStats();
+  render();
+}
+
+function renderStats(){
+  const counts = { new:0, 'in-progress':0, completed:0 };
+  allOrders.forEach(o => { if(counts[o.status] !== undefined) counts[o.status]++; });
+  const subText = counts['new'] > 0
+    ? `${counts['new']} fresh order${counts['new']===1?'':'s'} waiting to be picked up.`
+    : "Nothing new today — caught up and cozy.";
+  document.getElementById('welcomeSub').textContent = subText;
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card new"><div class="num">${counts['new']}</div><div class="lbl">New</div></div>
+    <div class="stat-card progress"><div class="num">${counts['in-progress']}</div><div class="lbl">In progress</div></div>
+    <div class="stat-card done"><div class="num">${counts['completed']}</div><div class="lbl">Completed</div></div>
+  `;
+}
+
+function render(){
+  const list = document.getElementById('ordersList');
+  const filtered = activeFilter === 'all' ? allOrders : allOrders.filter(o => o.status === activeFilter);
+  document.getElementById('orderCount').textContent = `${allOrders.length} order${allOrders.length===1?'':'s'}`;
+
+  if(filtered.length === 0){
+    list.innerHTML = `
+      <div class="empty">
+        <h3>Nothing here yet</h3>
+        <p>${activeFilter === 'all' ? "Orders will show up here as they come in." : `No orders are currently ${activeFilter.replace('-', ' ')}.`}</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(o => `
+    <div class="order-card" data-status="${o.status}">
+      <div class="swatch-strip"></div>
+      <div class="ticket-stub">
+        <div class="ticket-dot"></div>
+        <span class="ticket-num">${o.id}</span>
+      </div>
+      <div class="order-body">
+        <div class="order-title">${o.itemType} — ${o.name}</div>
+        <div class="order-sub">placed ${new Date(o.createdAt).toLocaleString()}</div>
+
+        <div class="detail-grid">
+          <div class="d-item"><div class="d-lbl">Size</div><div class="d-val">${o.size}</div></div>
+          <div class="d-item"><div class="d-lbl">Yarn</div><div class="d-val">${o.yarnType}</div></div>
+          <div class="d-item"><div class="d-lbl">Quantity</div><div class="d-val">${o.qty}</div></div>
+          <div class="d-item"><div class="d-lbl">Contact</div><div class="d-val">${o.email}</div></div>
+          ${o.deadline ? `<div class="d-item"><div class="d-lbl">Needed by</div><div class="d-val">${o.deadline}</div></div>` : ''}
+        </div>
+
+        ${o.paletteHex ? `<div class="colors"><span class="lbl">palette</span>${o.paletteHex.split(',').filter(Boolean).map(h=>`<div class="chip" style="background:${h.trim()}"></div>`).join('')}</div>` : ''}
+        ${o.images && o.images.length ? `<div class="thumbs"><span class="d-lbl">Reference photos</span>${o.images.map(src=>`<a href="${API_BASE}${src}" target="_blank" rel="noopener"><img src="${API_BASE}${src}" loading="lazy"></a>`).join('')}</div>` : ''}
         ${o.notes ? `<div class="notes"><span class="d-lbl">Notes</span>${o.notes}</div>` : ''}
       </div>
       <div class="status-col">
