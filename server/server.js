@@ -206,7 +206,41 @@ app.post('/api/orders', upload.array('referenceImages', 6), async (req, res) => 
     orders.unshift(order);
     writeOrders(orders);
 
-    // Email the customer (their real confirmation)
+//     // Email the customer (their real confirmation)
+//     await transporter.sendMail({
+//       from: process.env.FROM_EMAIL,
+//       to: order.email,
+//       subject: `Z&Z Crochet — order received (${order.id})`,
+//       html: customerEmailHtml(order)
+//     });
+
+//     // Email the admin/shop owner
+//     await transporter.sendMail({
+//       from: process.env.FROM_EMAIL,
+//       to: process.env.ADMIN_EMAIL,
+//       subject: `🐾 New order received — ${order.itemType} from ${order.name}`,
+//       html: adminEmailHtml(order),
+//       attachments: order.images.map(p => ({ path: path.join(__dirname, p) }))
+//     });
+
+//     res.json({ success: true, orderId: order.id });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Something went wrong submitting your order. Please try again.' });
+//   }
+// });
+
+    writeOrders(orders);
+
+// Tell the browser the order succeeded immediately
+res.json({
+  success: true,
+  orderId: order.id
+});
+
+// Send emails in the background
+(async () => {
+  try {
     await transporter.sendMail({
       from: process.env.FROM_EMAIL,
       to: order.email,
@@ -214,21 +248,21 @@ app.post('/api/orders', upload.array('referenceImages', 6), async (req, res) => 
       html: customerEmailHtml(order)
     });
 
-    // Email the admin/shop owner
     await transporter.sendMail({
       from: process.env.FROM_EMAIL,
       to: process.env.ADMIN_EMAIL,
       subject: `🐾 New order received — ${order.itemType} from ${order.name}`,
       html: adminEmailHtml(order),
-      attachments: order.images.map(p => ({ path: path.join(__dirname, p) }))
+      attachments: order.images.map(p => ({
+        path: path.join(__dirname, p)
+      }))
     });
 
-    res.json({ success: true, orderId: order.id });
+    console.log("Emails sent successfully.");
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Something went wrong submitting your order. Please try again.' });
+    console.error("Email sending failed:", err);
   }
-});
+})();
 
 // Admin: list all orders
 app.get('/api/orders', requireAdmin, (req, res) => {
