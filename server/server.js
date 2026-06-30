@@ -178,33 +178,33 @@ function adminEmailHtml(order) {
 }
 
 // ---------- routes ----------
-app.post('/api/orders', upload.array('referenceImages', 6), async (req, res) => {
-  try {
-    const body = req.body;
-    const required = ['itemType', 'size', 'yarnType', 'qty', 'name', 'email'];
-    for (const field of required) {
-      if (!body[field]) return res.status(400).json({ error: `Missing field: ${field}` });
-    }
+// app.post('/api/orders', upload.array('referenceImages', 6), async (req, res) => {
+//   try {
+//     const body = req.body;
+//     const required = ['itemType', 'size', 'yarnType', 'qty', 'name', 'email'];
+//     for (const field of required) {
+//       if (!body[field]) return res.status(400).json({ error: `Missing field: ${field}` });
+//     }
 
-    const order = {
-      id: nanoid(10),
-      createdAt: new Date().toISOString(),
-      status: 'new',
-      itemType: body.itemType,
-      size: body.size,
-      yarnType: body.yarnType,
-      qty: body.qty,
-      deadline: body.deadline || '',
-      name: body.name,
-      email: body.email,
-      notes: body.notes || '',
-      paletteHex: body.paletteHex || '',
-      images: (req.files || []).map(f => `/uploads/${f.filename}`)
-    };
+//     const order = {
+//       id: nanoid(10),
+//       createdAt: new Date().toISOString(),
+//       status: 'new',
+//       itemType: body.itemType,
+//       size: body.size,
+//       yarnType: body.yarnType,
+//       qty: body.qty,
+//       deadline: body.deadline || '',
+//       name: body.name,
+//       email: body.email,
+//       notes: body.notes || '',
+//       paletteHex: body.paletteHex || '',
+//       images: (req.files || []).map(f => `/uploads/${f.filename}`)
+//     };
 
-    const orders = readOrders();
-    orders.unshift(order);
-    writeOrders(orders);
+//     const orders = readOrders();
+//     orders.unshift(order);
+//     writeOrders(orders);
 
 //     // Email the customer (their real confirmation)
 //     await transporter.sendMail({
@@ -228,8 +228,89 @@ app.post('/api/orders', upload.array('referenceImages', 6), async (req, res) => 
 //     console.error(err);
 //     res.status(500).json({ error: 'Something went wrong submitting your order. Please try again.' });
 //   }
-  });
+  // });
+app.post('/api/orders', upload.array('referenceImages', 6), async (req, res) => {
+  try {
+    const body = req.body;
 
+    const required = [
+      'itemType',
+      'size',
+      'yarnType',
+      'qty',
+      'name',
+      'email'
+    ];
+
+    for (const field of required) {
+      if (!body[field]) {
+        return res.status(400).json({
+          error: `Missing field: ${field}`
+        });
+      }
+    }
+
+    const order = {
+      id: nanoid(10),
+      createdAt: new Date().toISOString(),
+      status: 'new',
+      itemType: body.itemType,
+      size: body.size,
+      yarnType: body.yarnType,
+      qty: body.qty,
+      deadline: body.deadline || '',
+      name: body.name,
+      email: body.email,
+      notes: body.notes || '',
+      paletteHex: body.paletteHex || '',
+      images: (req.files || []).map(f => `/uploads/${f.filename}`)
+    };
+
+    const orders = readOrders();
+    orders.unshift(order);
+    writeOrders(orders);
+
+    // Respond immediately
+    res.json({
+      success: true,
+      orderId: order.id
+    });
+
+    // Send emails in background
+    (async () => {
+      try {
+
+        await transporter.sendMail({
+          from: process.env.FROM_EMAIL,
+          to: order.email,
+          subject: `Z&Z Crochet — order received (${order.id})`,
+          html: customerEmailHtml(order)
+        });
+
+        await transporter.sendMail({
+          from: process.env.FROM_EMAIL,
+          to: process.env.ADMIN_EMAIL,
+          subject: `🐾 New order received — ${order.itemType}`,
+          html: adminEmailHtml(order),
+          attachments: order.images.map(p => ({
+            path: path.join(__dirname, p)
+          }))
+        });
+
+        console.log("Emails sent.");
+
+      } catch (err) {
+        console.error("Email failed:", err);
+      }
+    })();
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Something went wrong submitting your order.'
+    });
+  }
+});
    
 
 // Admin: list all orders
