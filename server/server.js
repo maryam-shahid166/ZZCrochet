@@ -230,7 +230,7 @@ app.post('/api/orders', upload.array('referenceImages', 6), async (req, res) => 
 //   }
 // });
 
-    writeOrders(orders);
+    //writeOrders(orders);
 
 // Tell the browser the order succeeded immediately
 res.json({
