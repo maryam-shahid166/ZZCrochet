@@ -223,6 +223,11 @@ header{
   animation:float 7s ease-in-out infinite;
 }
 
+/* Hidden on desktop */
+.nav-cta-mobile{
+  display:none;
+}
+
 @media (max-width: 980px){
   .hero-photo{
     max-width:340px;
@@ -258,6 +263,26 @@ header{
 
   .nav-cta{
     display:none;
+  }
+
+  .nav > .nav-cta{
+    display:none;
+  }
+
+  /* Show CTA inside dropdown */
+  .nav-cta-mobile{
+    display:block;
+    margin-top:10px;
+  }
+
+  .nav-cta-mobile a{
+    display:block;
+    text-align:center;
+    background:var(--lavender);
+    color:var(--charcoal);
+    padding:12px 18px;
+    border-radius:999px;
+    font-weight:700;
   }
 }
 @keyframes float{
@@ -682,7 +707,7 @@ footer{
       <li><a href="#order">Custom Order</a></li>
       <li><a href="#testimonials">Reviews</a></li>
       <li><a href="#about">About</a></li>
-        <li class="nav-cta-mobile"><a href="#order">🐾 Start an order</a></li>
+      <li class="nav-cta-mobile"><a href="#order">🐾 Start an order</a></li>
     </ul>
     <a href="#order" class="nav-cta">Start an order</a>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
@@ -1202,7 +1227,7 @@ function renderPreviews(){
 
 // ---- Form submit ----
 // Point this at your deployed backend, e.g. "https://zz-crochet-api.onrender.com"
-const API_BASE = "https://zzcrochet-production.up.railway.app";
+const API_BASE = "http://localhost:4000";
 
 const orderForm = document.getElementById('orderForm');
 const formConfirm = document.getElementById('formConfirm');
